@@ -5,65 +5,49 @@ declare(strict_types=1);
 namespace XBot\Telegram;
 
 use XBot\Telegram\Exceptions\ConfigurationException;
+use XBot\Telegram\Http\GuzzleHttpClient;
+use XBot\Telegram\Http\HttpClientConfig;
 
 /**
  * Bot: minimal entrypoint for common operations.
- *
- * Example:
- * Bot::init($config);
- * Bot::to(123456)->html()->message('<b>Hello</b>');
- * Bot::via('marketing')->to(123456)->message('Hi');
  */
 class Bot
 {
-    protected static ?BotManager $manager = null;
+    protected static ?TelegramBot $bot = null;
 
     /**
-     * Initialize with configuration array compatible with config/telegram.php structure.
+     * Initialize a single bot instance from configuration.
      */
     public static function init(array $config): void
     {
-        self::$manager = new BotManager($config);
+        $httpConfig = HttpClientConfig::fromArray($config);
+        $httpClient = new GuzzleHttpClient($httpConfig);
+
+        self::$bot = new TelegramBot($config['name'] ?? 'bot', $httpClient, $config);
     }
 
     /**
-     * Provide an existing manager (e.g., from a container).
+     * Provide an existing bot instance (e.g., from a container).
      */
-    public static function useManager(BotManager $manager): void
+    public static function useBot(TelegramBot $bot): void
     {
-        self::$manager = $manager;
+        self::$bot = $bot;
     }
 
     /**
-     * Get the underlying manager or throw if not initialized.
+     * Get the underlying bot or throw if not initialized.
      */
-    protected static function manager(): BotManager
+    public static function bot(): TelegramBot
     {
-        if (! self::$manager) {
-            throw ConfigurationException::missing('Bot manager not initialized. Call Bot::init($config) first.');
+        if (! self::$bot) {
+            throw ConfigurationException::missing('Bot not initialized. Call Bot::init($config) first.');
         }
 
-        return self::$manager;
+        return self::$bot;
     }
 
     /**
-     * Get a bot instance.
-     */
-    public static function bot(?string $name = null): TelegramBot
-    {
-        return self::manager()->bot($name);
-    }
-
-    /**
-     * Shortcut to select a bot for chaining.
-     */
-    public static function via(string $name): BotMessage
-    {
-        return new BotMessage(self::bot($name));
-    }
-
-    /**
-     * Begin a message chain to a chat using the default bot.
+     * Begin a message chain to a chat using the configured bot.
      */
     public static function to(int|string $chatId): BotMessage
     {

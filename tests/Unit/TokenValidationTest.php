@@ -2,75 +2,32 @@
 
 declare(strict_types=1);
 
-use XBot\Telegram\BotManager;
 use XBot\Telegram\TelegramBot;
-use XBot\Telegram\Exceptions\InstanceException;
+use XBot\Telegram\Tests\Support\FakeHttpClient;
+use XBot\Telegram\Exceptions\ConfigurationException;
 
 it('accepts valid token with default validation', function () {
-    $config = [
-        'default' => 'main',
-        'bots' => [
-            'main' => [
-                'token' => '123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi',
-            ],
-        ],
-    ];
-
-    $manager = new BotManager($config);
-    $bot = $manager->bot();
-
+    $bot = new TelegramBot('main', new FakeHttpClient('123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi'));
     expect($bot)->toBeInstanceOf(TelegramBot::class);
 });
 
 it('throws exception for invalid token format by default', function () {
-    $config = [
-        'default' => 'main',
-        'bots' => [
-            'main' => [
-                'token' => 'invalid-token',
-            ],
-        ],
-    ];
-
-    $manager = new BotManager($config);
-
-    expect(fn() => $manager->bot())->toThrow(InstanceException::class);
+    expect(fn() => new TelegramBot('main', new FakeHttpClient('invalid-token')))
+        ->toThrow(ConfigurationException::class);
 });
 
 it('allows overriding token pattern', function () {
-    $config = [
-        'default' => 'main',
-        'token_validation' => [
-            'pattern' => '/^test_token$/',
-        ],
-        'bots' => [
-            'main' => [
-                'token' => 'test_token',
-            ],
-        ],
-    ];
-
-    $manager = new BotManager($config);
-    $bot = $manager->bot();
+    $bot = new TelegramBot('main', new FakeHttpClient('test_token'), [
+        'token_validation' => ['pattern' => '/^test_token$/'],
+    ]);
 
     expect($bot->getToken())->toBe('test_token');
 });
 
 it('can disable token validation', function () {
-    $config = [
-        'default' => 'main',
-        'token_validation' => [
-            'enabled' => false,
-        ],
-        'bots' => [
-            'main' => [
-                'token' => 'invalid token',
-            ],
-        ],
-    ];
-
-    $manager = new BotManager($config);
-    $bot = $manager->bot();
+    $bot = new TelegramBot('main', new FakeHttpClient('invalid token'), [
+        'token_validation' => ['enabled' => false],
+    ]);
 
     expect($bot->getToken())->toBe('invalid token');
 });

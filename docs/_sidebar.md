@@ -2,13 +2,11 @@
 
 - **📘 用户指南**
   - [📦 安装指南](guide/installation.md)
-  - [🚀 快速开始](guide/quick-start.md)
   - [⚙️ 配置说明](guide/configuration.md)
-  - [🚢 部署指南](guide/deployment.md)
+  - [🚀 快速开始](guide/quick-start.md)
 
 - **📋 API 参考**
   - [📖 概览](api/)
-  - [🤖 BotManager](api/bot-manager.md)
   - [📡 TelegramBot](api/telegram-bot.md)
   - **🔧 API 方法**
     - [💬 消息方法](api/methods/message.md)
