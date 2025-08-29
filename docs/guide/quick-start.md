@@ -156,7 +156,11 @@ php interactive-bot.php
 
 ## 🏗️ Laravel 集成
 
-如果您使用 Laravel，集成更加简单：
+如果您使用 Laravel，集成更加简单。首先安装桥接包：
+
+```bash
+composer require xbot-my/telegram-sdk-laravel-bridge
+```
 
 ### 第 6 步：Laravel 配置
 

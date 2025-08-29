@@ -2,17 +2,15 @@
 
 ## Project Structure & Module Organization
 - `src/`: SDK source code
-  - `Console/`: CLI commands (e.g., webhook, health, stats)
   - `Contracts/`: Interfaces and DTO contracts
   - `Exceptions/`: Domain exceptions
-  - `Facades/`, `Providers/`: Laravel integration (service provider, facade)
   - `Http/`: HTTP client abstractions and Guzzle implementation
   - `Methods/`: Grouped Telegram API method sets
   - `Models/`: DTOs and response models
   - `Utils/`: Internal helpers
-- `tests/`: Pest tests (`Unit/`, `Feature/`), bootstrap in `tests/Pest.php`
-- `config/telegram.php`: Publishable Laravel config
+- `tests/`: Pest tests (`Unit/`), bootstrap in `tests/Pest.php`
 - `docs/`: Docs site assets (Docsify)
+- `laravel-bridge/`: Optional package with Laravel-specific providers, console commands, controllers, and config
 
 ## Build, Test, and Development Commands
 - Install deps: `composer install`
@@ -31,7 +29,7 @@
 
 ## Testing Guidelines
 - Framework: Pest (on top of PHPUnit)
-- Location: place unit tests in `tests/Unit`, integration/behavior in `tests/Feature`
+- Location: place tests in `tests/Unit`
 - Naming: `FooBarTest.php`; use `describe()/it()` with clear behavior-oriented names
 - Run locally: `vendor/bin/pest --coverage` (requires Xdebug) when validating changes
 - New features must include tests; cover error paths and DTO serialization

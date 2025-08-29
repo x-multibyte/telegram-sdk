@@ -1,5 +1,8 @@
 <?php
 
-test('that true is true', function () {
+declare(strict_types=1);
+
+test('placeholder passes', function () {
     expect(true)->toBeTrue();
 });
+

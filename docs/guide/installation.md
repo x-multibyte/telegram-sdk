@@ -112,7 +112,13 @@ try {
 
 ## 🏗️ Laravel 项目安装
 
-如果您在 Laravel 项目中使用，需要执行额外的配置步骤：
+若要在 Laravel 中使用本 SDK，请先安装可选的 `laravel-bridge` 子包：
+
+```bash
+composer require xbot-my/telegram-sdk-laravel-bridge
+```
+
+安装后执行以下配置步骤：
 
 ### 1. 发布配置文件
 
@@ -208,7 +214,7 @@ return [
 
 ### 4. 注册服务提供者（Laravel 10 以下）
 
-如果您使用的是 Laravel 10 以下版本，需要手动注册服务提供者。
+安装 `laravel-bridge` 后，如果您使用的是 Laravel 10 以下版本，需要手动注册服务提供者。
 
 在 `config/app.php` 的 `providers` 数组中添加：
 

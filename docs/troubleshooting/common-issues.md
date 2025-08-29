@@ -43,7 +43,7 @@ php artisan config:clear
 # 清除自动加载缓存
 composer dump-autoload
 
-# 重新发布配置
+如果已安装 `laravel-bridge`，可重新发布配置
 php artisan vendor:publish --provider="XBot\Telegram\Providers\TelegramServiceProvider" --force
 ```
 
