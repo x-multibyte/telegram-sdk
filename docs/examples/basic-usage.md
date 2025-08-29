@@ -13,19 +13,13 @@ require_once 'vendor/autoload.php';
 
 use XBot\\Telegram\\Bot;
 
-Bot::init([
-    'default' => 'main',
-    'bots' => [
-        'main' => ['token' => 'YOUR_BOT_TOKEN'],
-    ],
-]);
-
 // 一行发送
-Bot::to(123456789)->message('Hello, World!');
+Bot::token('YOUR_BOT_TOKEN')
+    ->message->sendMessage(123456789, 'Hello, World!');
 
 // 或获取实例执行更多操作
-$bot = Bot::bot();
-$bot->sendMessage(123456789, 'Hello again!');
+$bot = Bot::token('YOUR_BOT_TOKEN');
+$bot->message->sendMessage(123456789, 'Hello again!');
 ```
 
 ### 1. 创建第一个 Bot
@@ -35,20 +29,13 @@ $bot->sendMessage(123456789, 'Hello again!');
 
 require_once 'vendor/autoload.php';
 
-use XBot\Telegram\BotManager;
-use XBot\Telegram\Http\GuzzleHttpClient;
-
-// 创建 HTTP 客户端
-$httpClient = new GuzzleHttpClient('YOUR_BOT_TOKEN');
-
-// 创建 Bot 管理器
-$manager = new BotManager();
+use XBot\\Telegram\\Bot;
 
 // 创建 Bot 实例
-$bot = $manager->createBot('my-bot', $httpClient);
+$bot = Bot::token('YOUR_BOT_TOKEN');
 
 // 发送第一条消息
-$message = $bot->sendMessage(123456789, 'Hello, World!');
+$message = $bot->message->sendMessage(123456789, 'Hello, World!');
 echo "消息已发送，ID: " . $message->messageId;
 ```
 

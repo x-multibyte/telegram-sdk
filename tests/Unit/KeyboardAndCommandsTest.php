@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use XBot\Telegram\TelegramBot;
 use XBot\Telegram\Tests\Support\FakeHttpClient;
-use XBot\Telegram\Bot;
 
 it('BotMessage builds inline and reply keyboards and removal/forceReply', function () {
     $sent = [];
@@ -13,8 +12,7 @@ it('BotMessage builds inline and reply keyboards and removal/forceReply', functi
         return ['ok' => true, 'result' => ['message_id' => rand(1, 1000), 'date' => time(), 'chat' => ['id' => 1, 'type' => 'private']]];
     });
 
-    Bot::useManager(new \XBot\Telegram\BotManager(['default' => 'd', 'bots' => ['d' => ['token' => 'T']]]));
-    // Inject bot into Bot facade-like entry by replacing via quick call
+    // Inject bot into BotMessage helper using a fake client
     $bot = new TelegramBot('d', $client);
 
     // Inline keyboard
