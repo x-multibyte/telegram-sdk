@@ -23,9 +23,7 @@ graph TB
     end
     
     subgraph "核心层"
-        TelegramBot[TelegramBot]
-        BotManager[BotManager]
-        HttpClient[HTTP客户端]
+        TelegramBot[TelegramBot]        HttpClient[HTTP客户端]
     end
     
     TelegramBot --> MessageMethods

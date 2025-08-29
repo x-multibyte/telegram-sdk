@@ -5,69 +5,45 @@ declare(strict_types=1);
 namespace XBot\Telegram\Console\Commands;
 
 use Illuminate\Console\Command;
-use XBot\Telegram\BotManager;
+use XBot\Telegram\TelegramBot;
 
 /**
- * Telegram Webhook 管理命令
+ * Telegram Webhook management command.
  */
 class TelegramWebhookCommand extends Command
 {
-    /**
-     * 命令签名
-     */
-    protected $signature = 'telegram:webhook 
+    protected $signature = 'telegram:webhook
                            {action : Action to perform (set|delete|info)}
-                           {bot? : The bot name}
                            {--url= : Webhook URL (required for set action)}
-                           {--all : Apply to all bots}
                            {--drop-pending : Drop pending updates when deleting webhook}
                            {--secret= : Webhook secret token}
                            {--certificate= : Path to certificate file}
                            {--max-connections=100 : Maximum allowed number of simultaneous connections}
                            {--allowed-updates=* : List of allowed update types}';
 
-    /**
-     * 命令描述
-     */
-    protected $description = 'Manage Telegram bot webhooks';
+    protected $description = 'Manage Telegram bot webhook';
 
-    /**
-     * Bot 管理器
-     */
-    protected BotManager $botManager;
+    protected TelegramBot $bot;
 
-    public function __construct(BotManager $botManager)
+    public function __construct(TelegramBot $bot)
     {
         parent::__construct();
-        $this->botManager = $botManager;
+        $this->bot = $bot;
     }
 
-    /**
-     * 执行命令
-     */
     public function handle(): int
     {
         $action = $this->argument('action');
-        $botName = $this->argument('bot');
-        $applyToAll = $this->option('all');
 
-        try {
-            return match ($action) {
-                'set' => $this->setWebhook($botName, $applyToAll),
-                'delete' => $this->deleteWebhook($botName, $applyToAll),
-                'info' => $this->getWebhookInfo($botName, $applyToAll),
-                default => $this->invalidAction($action),
-            };
-        } catch (\Throwable $e) {
-            $this->error("Failed to execute webhook action: {$e->getMessage()}");
-            return 1;
-        }
+        return match ($action) {
+            'set' => $this->setWebhook(),
+            'delete' => $this->deleteWebhook(),
+            'info' => $this->getWebhookInfo(),
+            default => $this->invalidAction($action),
+        };
     }
 
-    /**
-     * 设置 Webhook
-     */
-    protected function setWebhook(?string $botName, bool $applyToAll): int
+    protected function setWebhook(): int
     {
         $url = $this->option('url');
         if (empty($url)) {
@@ -76,143 +52,45 @@ class TelegramWebhookCommand extends Command
         }
 
         $options = $this->buildWebhookOptions();
+        $this->info("Setting webhook: {$url}");
 
-        if ($applyToAll) {
-            return $this->setAllWebhooks($url, $options);
-        }
-
-        $botName = $botName ?? $this->botManager->getDefaultBotName();
-        
-        if ($applyToAll) {
-            // 为每个 Bot 使用不同的 URL 路径
-            $results = $this->botManager->setAllWebhooks($url, $options);
-            $this->displayBatchResults('Set Webhook', $results);
-            return $this->hasFailures($results) ? 1 : 0;
-        }
-
-        $bot = $this->botManager->bot($botName);
-        $webhookUrl = $this->buildBotWebhookUrl($url, $botName);
-
-        $this->info("Setting webhook for bot: {$botName}");
-        $this->info("Webhook URL: {$webhookUrl}");
-
-        $success = $bot->setWebhook($webhookUrl, $options);
+        $success = $this->bot->setWebhook($url, $options);
 
         if ($success) {
-            $this->info("✅ Webhook set successfully for bot: {$botName}");
+            $this->info('✅ Webhook set successfully');
             return 0;
-        } else {
-            $this->error("❌ Failed to set webhook for bot: {$botName}");
-            return 1;
         }
+
+        $this->error('❌ Failed to set webhook');
+        return 1;
     }
 
-    /**
-     * 删除 Webhook
-     */
-    protected function deleteWebhook(?string $botName, bool $applyToAll): int
+    protected function deleteWebhook(): int
     {
         $dropPending = $this->option('drop-pending');
-
-        if ($applyToAll) {
-            $results = $this->botManager->deleteAllWebhooks($dropPending);
-            $this->displayBatchResults('Delete Webhook', $results);
-            return $this->hasFailures($results) ? 1 : 0;
-        }
-
-        $botName = $botName ?? $this->botManager->getDefaultBotName();
-        $bot = $this->botManager->bot($botName);
-
-        $this->info("Deleting webhook for bot: {$botName}");
         if ($dropPending) {
-            $this->info("Dropping pending updates...");
+            $this->info('Dropping pending updates...');
         }
 
-        $success = $bot->deleteWebhook($dropPending);
+        $success = $this->bot->deleteWebhook($dropPending);
 
         if ($success) {
-            $this->info("✅ Webhook deleted successfully for bot: {$botName}");
+            $this->info('✅ Webhook deleted successfully');
             return 0;
-        } else {
-            $this->error("❌ Failed to delete webhook for bot: {$botName}");
-            return 1;
         }
+
+        $this->error('❌ Failed to delete webhook');
+        return 1;
     }
 
-    /**
-     * 获取 Webhook 信息
-     */
-    protected function getWebhookInfo(?string $botName, bool $applyToAll): int
+    protected function getWebhookInfo(): int
     {
-        if ($applyToAll) {
-            return $this->getAllWebhooksInfo();
-        }
-
-        $botName = $botName ?? $this->botManager->getDefaultBotName();
-        $bot = $this->botManager->bot($botName);
-
-        $this->info("Webhook information for bot: {$botName}");
-        $webhookInfo = $bot->getWebhookInfo();
-
-        $this->displayWebhookInfo($webhookInfo);
-
+        $this->info('Webhook information:');
+        $info = $this->bot->getWebhookInfo();
+        $this->displayWebhookInfo($info);
         return 0;
     }
 
-    /**
-     * 设置所有 Bot 的 Webhook
-     */
-    protected function setAllWebhooks(string $baseUrl, array $options): int
-    {
-        $this->info("Setting webhooks for all bots...");
-        $results = $this->botManager->setAllWebhooks($baseUrl, $options);
-        $this->displayBatchResults('Set Webhook', $results);
-        return $this->hasFailures($results) ? 1 : 0;
-    }
-
-    /**
-     * 获取所有 Bot 的 Webhook 信息
-     */
-    protected function getAllWebhooksInfo(): int
-    {
-        $this->info("Webhook information for all bots:");
-        $this->line('');
-
-        $tableData = [];
-        foreach ($this->botManager->getBotNames() as $botName) {
-            try {
-                $bot = $this->botManager->bot($botName);
-                $info = $bot->getWebhookInfo();
-                
-                $tableData[] = [
-                    $botName,
-                    $info['url'] ?: 'Not set',
-                    $info['has_custom_certificate'] ? 'Yes' : 'No',
-                    $info['pending_update_count'] ?? 0,
-                    $info['last_error_date'] ? 'Yes' : 'No',
-                ];
-            } catch (\Throwable $e) {
-                $tableData[] = [
-                    $botName,
-                    'ERROR',
-                    'N/A',
-                    'N/A',
-                    substr($e->getMessage(), 0, 30) . '...',
-                ];
-            }
-        }
-
-        $this->table(
-            ['Bot Name', 'Webhook URL', 'Custom Cert', 'Pending Updates', 'Has Error'],
-            $tableData
-        );
-
-        return 0;
-    }
-
-    /**
-     * 构建 Webhook 选项
-     */
     protected function buildWebhookOptions(): array
     {
         $options = [];
@@ -240,25 +118,6 @@ class TelegramWebhookCommand extends Command
         return $options;
     }
 
-    /**
-     * 构建 Bot 的 Webhook URL
-     */
-    protected function buildBotWebhookUrl(string $baseUrl, string $botName): string
-    {
-        $baseUrl = rtrim($baseUrl, '/');
-        
-        // 如果 URL 已经包含了 Bot 名称，直接返回
-        if (str_contains($baseUrl, $botName)) {
-            return $baseUrl;
-        }
-
-        // 否则添加 Bot 名称作为路径
-        return "{$baseUrl}/{$botName}";
-    }
-
-    /**
-     * 显示 Webhook 信息
-     */
     protected function displayWebhookInfo(array $info): void
     {
         $tableData = [
@@ -268,68 +127,26 @@ class TelegramWebhookCommand extends Command
             ['Max Connections', $info['max_connections'] ?? 'Default'],
         ];
 
-        if (!empty($info['ip_address'])) {
+        if (! empty($info['ip_address'])) {
             $tableData[] = ['IP Address', $info['ip_address']];
         }
 
-        if (!empty($info['last_error_date'])) {
+        if (! empty($info['last_error_date'])) {
             $tableData[] = ['Last Error Date', date('Y-m-d H:i:s', $info['last_error_date'])];
             $tableData[] = ['Last Error Message', $info['last_error_message'] ?? 'Unknown'];
         }
 
-        if (!empty($info['allowed_updates'])) {
+        if (! empty($info['allowed_updates'])) {
             $tableData[] = ['Allowed Updates', implode(', ', $info['allowed_updates'])];
         }
 
         $this->table(['Property', 'Value'], $tableData);
     }
 
-    /**
-     * 显示批量操作结果
-     */
-    protected function displayBatchResults(string $operation, array $results): void
-    {
-        $this->line('');
-        $this->info("{$operation} Results:");
-
-        $tableData = [];
-        foreach ($results as $result) {
-            $status = $result['success'] ? '✅ Success' : '❌ Failed';
-            $info = $result['success'] 
-                ? ($result['webhook_url'] ?? 'N/A')
-                : substr($result['error'], 0, 50) . '...';
-            
-            $tableData[] = [
-                $result['name'],
-                $status,
-                $info,
-            ];
-        }
-
-        $this->table(['Bot Name', 'Status', 'Info'], $tableData);
-
-        $successful = array_filter($results, fn($r) => $r['success']);
-        $failed = array_filter($results, fn($r) => !$r['success']);
-
-        $this->line('');
-        $this->info("Summary: " . count($successful) . " successful, " . count($failed) . " failed");
-    }
-
-    /**
-     * 检查是否有失败的操作
-     */
-    protected function hasFailures(array $results): bool
-    {
-        return !empty(array_filter($results, fn($r) => !$r['success']));
-    }
-
-    /**
-     * 处理无效操作
-     */
     protected function invalidAction(string $action): int
     {
         $this->error("Invalid action: {$action}");
-        $this->info("Available actions: set, delete, info");
+        $this->info('Available actions: set, delete, info');
         return 1;
     }
 }

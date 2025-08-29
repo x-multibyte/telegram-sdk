@@ -6,88 +6,47 @@ namespace XBot\Telegram\Providers;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
-use XBot\Telegram\BotManager;
-use XBot\Telegram\Contracts\BotManagerInterface;
+use XBot\Telegram\TelegramBot;
+use XBot\Telegram\Http\GuzzleHttpClient;
+use XBot\Telegram\Http\HttpClientConfig;
 
 /**
- * Telegram SDK 服务提供者
- * 
- * 注册 Telegram SDK 的服务到 Laravel 容器
+ * Telegram SDK service provider.
  */
 class TelegramServiceProvider extends ServiceProvider
 {
-    /**
-     * 注册服务
-     */
     public function register(): void
     {
-        $this->mergeConfigFrom(
-            __DIR__ . '/../../config/telegram.php',
-            'telegram'
-        );
+        $this->mergeConfigFrom(__DIR__ . '/../../config/telegram.php', 'telegram');
 
-        $this->registerBotManager();
-        $this->registerAliases();
+        $this->app->singleton(TelegramBot::class, function (Container $app): TelegramBot {
+            $config = $app['config']['telegram'];
+            $httpConfig = HttpClientConfig::fromArray($config);
+            $httpClient = new GuzzleHttpClient($httpConfig);
+
+            return new TelegramBot($config['name'] ?? 'bot', $httpClient, $config);
+        });
+
+        $this->app->alias(TelegramBot::class, 'telegram');
     }
 
-    /**
-     * 启动服务
-     */
     public function boot(): void
     {
         $this->publishConfig();
         $this->registerCommands();
-        $this->registerRoutesV2();
+        $this->registerRoutes();
         $this->registerMiddleware();
     }
 
-    /**
-     * 注册 Bot 管理器
-     */
-    protected function registerBotManager(): void
-    {
-        $this->app->singleton(BotManagerInterface::class, function (Container $app): BotManagerInterface {
-            $config = $app['config']['telegram'];
-            return new BotManager($config);
-        });
-
-        $this->app->singleton(BotManager::class, function (Container $app): BotManager {
-            return $app->make(BotManagerInterface::class);
-        });
-
-        $this->app->singleton('telegram', function (Container $app): BotManager {
-            return $app->make(BotManagerInterface::class);
-        });
-    }
-
-    /**
-     * 注册别名
-     */
-    protected function registerAliases(): void
-    {
-        $this->app->alias(BotManagerInterface::class, 'telegram.manager');
-        $this->app->alias(BotManager::class, 'telegram.manager');
-    }
-
-    /**
-     * 发布配置文件
-     */
     protected function publishConfig(): void
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__ . '/../../config/telegram.php' => config_path('telegram.php'),
             ], 'telegram-config');
-
-            $this->publishes([
-                __DIR__ . '/../../config/telegram.php' => config_path('telegram.php'),
-            ], 'telegram');
         }
     }
 
-    /**
-     * 注册 Artisan 命令
-     */
     protected function registerCommands(): void
     {
         if ($this->app->runningInConsole()) {
@@ -100,66 +59,31 @@ class TelegramServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * 注册路由
-     */
     protected function registerRoutes(): void
     {
         if ($this->app->bound('router')) {
             $router = $this->app['router'];
-            
-            // 注册 Webhook 路由组
+
             $router->group([
                 'prefix' => config('telegram.webhook.route_prefix', 'telegram/webhook'),
                 'middleware' => config('telegram.webhook.middleware', ['api']),
-                'namespace' => 'XBot\Telegram\Http\Controllers',
             ], function ($router) {
-                $router->post('/{botName}', 'WebhookController@handle');
+                $router->post('/', [\XBot\Telegram\Http\Controllers\WebhookController::class, 'handle']);
             });
         }
     }
 
-    /**
-     * 注册中间件
-     */
     protected function registerMiddleware(): void
     {
         if ($this->app->bound('router')) {
             $router = $this->app['router'];
-            
-            // 注册 Telegram 专用中间件
             $router->aliasMiddleware('telegram.webhook', \XBot\Telegram\Http\Middleware\VerifyWebhookSignature::class);
             $router->aliasMiddleware('telegram.rate_limit', \XBot\Telegram\Http\Middleware\TelegramRateLimit::class);
         }
     }
 
-    /**
-     * 注册路由（类数组写法，Laravel 10/11 兼容）
-     */
-    protected function registerRoutesV2(): void
-    {
-        if ($this->app->bound('router')) {
-            $router = $this->app['router'];
-
-            $router->group([
-                'prefix' => config('telegram.webhook.route_prefix', 'telegram/webhook'),
-                'middleware' => config('telegram.webhook.middleware', ['api']),
-            ], function ($router) {
-                $router->post('/{botName}', [\XBot\Telegram\Http\Controllers\WebhookController::class, 'handle']);
-            });
-        }
-    }
-
-    /**
-     * 获取提供的服务
-     */
     public function provides(): array
     {
-        return [
-            BotManagerInterface::class,
-            BotManager::class,
-            'telegram',
-            'telegram.manager',
-        ];
+        return [TelegramBot::class, 'telegram'];
     }
 }
