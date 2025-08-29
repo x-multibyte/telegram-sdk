@@ -12,6 +12,11 @@ use XBot\Telegram\Models\DTO\ChosenInlineResult;
 use XBot\Telegram\Models\DTO\Poll;
 use XBot\Telegram\Models\DTO\PollAnswer;
 use XBot\Telegram\Exceptions\ValidationException;
+use XBot\Telegram\TelegramBot;
+use XBot\Telegram\Contracts\TelegramBotInterface;
+use XBot\Telegram\Tests\Support\FakeHttpClient;
+
+uses(XBot\Telegram\Tests\TestCase::class);
 
 beforeEach(function () {
     $this->baseUpdateId = 12345;
@@ -22,6 +27,33 @@ beforeEach(function () {
     $this->userData = $this->createMockUser($this->baseUserId, 'TestUser', false);
     $this->chatData = $this->createMockChat($this->baseChatId, 'private');
     $this->messageData = $this->createMockMessage(1, $this->baseChatId, 'Hello World', $this->baseUserId);
+});
+
+
+describe('logOut 和 close 方法', function () {
+    it('通过接口调用 logOut', function () {
+        $client = new FakeHttpClient(handler: function ($method, $params) {
+            expect($method)->toBe('logOut');
+            expect($params)->toBe([]);
+            return ['ok' => true, 'result' => true];
+        });
+
+        /** @var TelegramBotInterface $bot */
+        $bot = new TelegramBot('test', $client);
+        expect($bot->logOut())->toBeTrue();
+    });
+
+    it('通过接口调用 close', function () {
+        $client = new FakeHttpClient(handler: function ($method, $params) {
+            expect($method)->toBe('close');
+            expect($params)->toBe([]);
+            return ['ok' => true, 'result' => true];
+        });
+
+        /** @var TelegramBotInterface $bot */
+        $bot = new TelegramBot('test', $client);
+        expect($bot->close())->toBeTrue();
+    });
 });
 
 describe('Update DTO 测试', function () {

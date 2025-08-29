@@ -90,6 +90,16 @@ class TelegramBot
         return $this->botInfo;
     }
 
+    public function logOut(): bool
+    {
+        return $this->methods('update')->logOut();
+    }
+
+    public function close(): bool
+    {
+        return $this->methods('update')->close();
+    }
+
     public function methods(string $group): BaseMethodGroup
     {
         $group = strtolower($group);

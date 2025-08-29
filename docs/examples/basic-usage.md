@@ -204,6 +204,16 @@ $bot->editMessageReplyMarkup($chatId, $messageId, [
 $bot->deleteMessage($chatId, $messageId);
 ```
 
+### 注销和关闭 Bot
+
+```php
+// 注销当前 Bot 会话
+$bot->logOut();
+
+// 关闭连接并释放资源
+$bot->close();
+```
+
 ## 🛠️ 错误处理
 
 ```php

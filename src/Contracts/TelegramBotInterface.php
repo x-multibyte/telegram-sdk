@@ -32,6 +32,16 @@ interface TelegramBotInterface
     public function getMe(): User;
 
     /**
+     * 注销 Bot
+     */
+    public function logOut(): bool;
+
+    /**
+     * 关闭 Bot
+     */
+    public function close(): bool;
+
+    /**
      * 发送消息
      */
     public function sendMessage(
